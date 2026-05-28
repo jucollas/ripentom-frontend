@@ -1,0 +1,687 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>RipenTom — Tomato Classifier</title>
+  <link rel="preconnect" href="https://fonts.googleapis.com" />
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
+  <link href="https://fonts.googleapis.com/css2?family=Fredoka:wght@400;500;600;700&family=Plus+Jakarta+Sans:wght@400;500;600&display=swap" rel="stylesheet" />
+  <style>
+    /* ─── RESET & BASE ─────────────────────────────────────────────── */
+    *, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
+
+    :root {
+      --green:    #3a7d44;
+      --green-l:  #52a85f;
+      --green-xl: #d4edda;
+      --red:      #c0392b;
+      --red-l:    #e74c3c;
+      --red-xl:   #fdecea;
+      --amber:    #d4860b;
+      --amber-l:  #f0a500;
+      --amber-xl: #fff3cd;
+      --bg:       #f5f7f2;
+      --card:     #ffffff;
+      --text:     #1a2e1c;
+      --muted:    #6b7c6d;
+      --border:   #dde8de;
+      --shadow:   0 4px 24px rgba(30,60,32,.10);
+      --shadow-lg:0 12px 48px rgba(30,60,32,.16);
+      --radius:   20px;
+      --radius-sm:12px;
+    }
+
+    html { scroll-behavior: smooth; }
+
+    body {
+      font-family: 'Plus Jakarta Sans', sans-serif;
+      background: var(--bg);
+      color: var(--text);
+      min-height: 100vh;
+      overflow-x: hidden;
+    }
+
+    /* ─── BACKGROUND PATTERN ───────────────────────────────────────── */
+    body::before {
+      content: '';
+      position: fixed;
+      inset: 0;
+      background-image:
+        radial-gradient(circle at 15% 20%, rgba(58,125,68,.07) 0%, transparent 50%),
+        radial-gradient(circle at 85% 80%, rgba(192,57,43,.06) 0%, transparent 50%),
+        radial-gradient(circle at 50% 50%, rgba(240,165,0,.04) 0%, transparent 60%);
+      pointer-events: none;
+      z-index: 0;
+    }
+
+    /* ─── HEADER ────────────────────────────────────────────────────── */
+    header {
+      position: relative;
+      z-index: 10;
+      text-align: center;
+      padding: 3rem 1.5rem 2rem;
+      animation: fadeDown .7s ease both;
+    }
+
+    .logo-wrap {
+      display: inline-flex;
+      align-items: center;
+      gap: 14px;
+      background: var(--card);
+      border: 1.5px solid var(--border);
+      border-radius: 999px;
+      padding: .6rem 1.6rem .6rem .8rem;
+      box-shadow: var(--shadow);
+      margin-bottom: 1.5rem;
+    }
+
+    .logo-icon {
+      width: 44px; height: 44px;
+      background: linear-gradient(135deg, var(--green-l), var(--green));
+      border-radius: 50%;
+      display: flex; align-items: center; justify-content: center;
+      font-size: 22px;
+    }
+
+    .logo-text {
+      font-family: 'Fredoka', sans-serif;
+      font-size: 1.5rem;
+      font-weight: 700;
+      color: var(--green);
+      letter-spacing: .02em;
+    }
+
+    .logo-text span { color: var(--red-l); }
+
+    h1 {
+      font-family: 'Fredoka', sans-serif;
+      font-size: clamp(2rem, 5vw, 3.2rem);
+      font-weight: 700;
+      line-height: 1.1;
+      color: var(--text);
+      margin-bottom: .75rem;
+    }
+
+    h1 em {
+      font-style: normal;
+      color: var(--green);
+    }
+
+    .subtitle {
+      font-size: 1rem;
+      color: var(--muted);
+      max-width: 480px;
+      margin: 0 auto;
+      line-height: 1.6;
+    }
+
+    /* ─── MAIN CARD ─────────────────────────────────────────────────── */
+    .main {
+      position: relative;
+      z-index: 5;
+      max-width: 760px;
+      margin: 0 auto;
+      padding: 0 1.25rem 4rem;
+    }
+
+    .card {
+      background: var(--card);
+      border-radius: var(--radius);
+      border: 1.5px solid var(--border);
+      box-shadow: var(--shadow);
+      overflow: hidden;
+      animation: fadeUp .7s .1s ease both;
+    }
+
+    /* ─── DROP ZONE ─────────────────────────────────────────────────── */
+    .drop-zone {
+      position: relative;
+      margin: 1.75rem 1.75rem 0;
+      border: 2.5px dashed var(--border);
+      border-radius: var(--radius-sm);
+      min-height: 260px;
+      display: flex;
+      flex-direction: column;
+      align-items: center;
+      justify-content: center;
+      gap: 1rem;
+      cursor: pointer;
+      transition: border-color .2s, background .2s;
+      overflow: hidden;
+      background: var(--bg);
+    }
+
+    .drop-zone:hover, .drop-zone.drag {
+      border-color: var(--green-l);
+      background: var(--green-xl);
+    }
+
+    .drop-zone input[type="file"] {
+      position: absolute;
+      inset: 0;
+      opacity: 0;
+      cursor: pointer;
+      width: 100%;
+      height: 100%;
+    }
+
+    .drop-icon {
+      width: 64px; height: 64px;
+      background: var(--green-xl);
+      border-radius: 50%;
+      display: flex; align-items: center; justify-content: center;
+      font-size: 28px;
+      transition: transform .2s;
+    }
+
+    .drop-zone:hover .drop-icon { transform: scale(1.1) translateY(-3px); }
+
+    .drop-title {
+      font-family: 'Fredoka', sans-serif;
+      font-size: 1.15rem;
+      font-weight: 600;
+      color: var(--text);
+    }
+
+    .drop-sub {
+      font-size: .82rem;
+      color: var(--muted);
+    }
+
+    .preview-img {
+      position: absolute;
+      inset: 0;
+      width: 100%;
+      height: 100%;
+      object-fit: contain;
+      background: #1a1a1a;
+      display: none;
+    }
+
+    /* ─── ACTIONS ───────────────────────────────────────────────────── */
+    .actions {
+      display: flex;
+      gap: 12px;
+      padding: 1.25rem 1.75rem 1.75rem;
+    }
+
+    .btn {
+      flex: 1;
+      padding: .85rem 1.25rem;
+      border-radius: var(--radius-sm);
+      border: 1.5px solid var(--border);
+      font-family: 'Plus Jakarta Sans', sans-serif;
+      font-size: .92rem;
+      font-weight: 600;
+      cursor: pointer;
+      transition: all .18s;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      gap: 8px;
+    }
+
+    .btn-primary {
+      background: var(--green);
+      color: #fff;
+      border-color: var(--green);
+      box-shadow: 0 4px 14px rgba(58,125,68,.3);
+    }
+
+    .btn-primary:hover:not(:disabled) {
+      background: var(--green-l);
+      border-color: var(--green-l);
+      transform: translateY(-1px);
+      box-shadow: 0 6px 20px rgba(58,125,68,.35);
+    }
+
+    .btn-primary:disabled {
+      opacity: .45;
+      cursor: not-allowed;
+      box-shadow: none;
+    }
+
+    .btn-secondary {
+      background: var(--card);
+      color: var(--muted);
+    }
+
+    .btn-secondary:hover:not(:disabled) {
+      background: var(--bg);
+      color: var(--text);
+    }
+
+    /* ─── DIVIDER ───────────────────────────────────────────────────── */
+    .divider {
+      height: 1px;
+      background: var(--border);
+      margin: 0 1.75rem;
+    }
+
+    /* ─── RESULT ────────────────────────────────────────────────────── */
+    #result-area {
+      padding: 0 1.75rem 1.75rem;
+    }
+
+    .result-wrap {
+      margin-top: 1.5rem;
+      animation: fadeUp .4s ease both;
+    }
+
+    .result-header {
+      display: flex;
+      align-items: center;
+      gap: 1rem;
+      margin-bottom: 1.5rem;
+    }
+
+    .result-badge {
+      width: 64px; height: 64px;
+      border-radius: 16px;
+      display: flex; align-items: center; justify-content: center;
+      font-size: 30px;
+      flex-shrink: 0;
+    }
+
+    .badge-ripe    { background: var(--red-xl); }
+    .badge-unripe  { background: var(--green-xl); }
+    .badge-damage  { background: var(--amber-xl); }
+
+    .result-class {
+      font-family: 'Fredoka', sans-serif;
+      font-size: 1.75rem;
+      font-weight: 700;
+      line-height: 1;
+      margin-bottom: .3rem;
+    }
+
+    .result-class.ripe   { color: var(--red-l); }
+    .result-class.unripe { color: var(--green); }
+    .result-class.damage { color: var(--amber); }
+
+    .result-desc {
+      font-size: .88rem;
+      color: var(--muted);
+    }
+
+    /* ─── BARS ──────────────────────────────────────────────────────── */
+    .bars { display: flex; flex-direction: column; gap: 10px; }
+
+    .bar-row {
+      display: flex;
+      align-items: center;
+      gap: 12px;
+    }
+
+    .bar-emoji { font-size: 18px; width: 24px; text-align: center; flex-shrink: 0; }
+
+    .bar-label {
+      font-size: .82rem;
+      font-weight: 600;
+      color: var(--text);
+      width: 72px;
+      flex-shrink: 0;
+    }
+
+    .bar-track {
+      flex: 1;
+      height: 10px;
+      border-radius: 99px;
+      background: var(--bg);
+      overflow: hidden;
+      border: 1px solid var(--border);
+    }
+
+    .bar-fill {
+      height: 100%;
+      border-radius: 99px;
+      transition: width .7s cubic-bezier(.4,0,.2,1);
+      width: 0%;
+    }
+
+    .fill-ripe   { background: linear-gradient(90deg, #e74c3c, #c0392b); }
+    .fill-unripe { background: linear-gradient(90deg, #52a85f, #3a7d44); }
+    .fill-damage { background: linear-gradient(90deg, #f0a500, #d4860b); }
+
+    .bar-pct {
+      font-size: .82rem;
+      font-weight: 600;
+      width: 38px;
+      text-align: right;
+      color: var(--muted);
+      flex-shrink: 0;
+    }
+
+    /* ─── LOADING ────────────────────────────────────────────────────── */
+    .loading-wrap {
+      display: flex;
+      flex-direction: column;
+      align-items: center;
+      gap: 1rem;
+      padding: 2rem 0 1rem;
+      animation: fadeUp .3s ease both;
+    }
+
+    .spinner {
+      width: 44px; height: 44px;
+      border: 3px solid var(--border);
+      border-top-color: var(--green);
+      border-radius: 50%;
+      animation: spin .7s linear infinite;
+    }
+
+    .loading-text {
+      font-family: 'Fredoka', sans-serif;
+      font-size: 1.1rem;
+      color: var(--muted);
+    }
+
+    /* ─── ERROR ──────────────────────────────────────────────────────── */
+    .error-box {
+      display: flex;
+      align-items: flex-start;
+      gap: 10px;
+      background: var(--red-xl);
+      border: 1px solid #f5b7b1;
+      border-radius: var(--radius-sm);
+      padding: 1rem 1.25rem;
+      margin-top: 1.25rem;
+      font-size: .88rem;
+      color: var(--red);
+      animation: fadeUp .3s ease both;
+    }
+
+    /* ─── FOOTER ─────────────────────────────────────────────────────── */
+    footer {
+      position: relative;
+      z-index: 5;
+      text-align: center;
+      padding: 0 1.5rem 2.5rem;
+      font-size: .8rem;
+      color: var(--muted);
+    }
+
+    footer a { color: var(--green); text-decoration: none; }
+    footer a:hover { text-decoration: underline; }
+
+    /* ─── HOW IT WORKS ───────────────────────────────────────────────── */
+    .steps {
+      display: grid;
+      grid-template-columns: repeat(3, 1fr);
+      gap: 12px;
+      margin-bottom: 1.5rem;
+      animation: fadeUp .7s .2s ease both;
+    }
+
+    .step {
+      background: var(--card);
+      border: 1.5px solid var(--border);
+      border-radius: var(--radius-sm);
+      padding: 1.1rem 1rem;
+      text-align: center;
+    }
+
+    .step-num {
+      width: 32px; height: 32px;
+      background: var(--green-xl);
+      color: var(--green);
+      border-radius: 50%;
+      display: flex; align-items: center; justify-content: center;
+      font-family: 'Fredoka', sans-serif;
+      font-size: .95rem;
+      font-weight: 700;
+      margin: 0 auto .65rem;
+    }
+
+    .step-title {
+      font-family: 'Fredoka', sans-serif;
+      font-size: .95rem;
+      font-weight: 600;
+      color: var(--text);
+      margin-bottom: .25rem;
+    }
+
+    .step-sub { font-size: .75rem; color: var(--muted); line-height: 1.4; }
+
+    /* ─── KEYFRAMES ──────────────────────────────────────────────────── */
+    @keyframes fadeDown {
+      from { opacity:0; transform:translateY(-20px); }
+      to   { opacity:1; transform:translateY(0); }
+    }
+    @keyframes fadeUp {
+      from { opacity:0; transform:translateY(16px); }
+      to   { opacity:1; transform:translateY(0); }
+    }
+    @keyframes spin {
+      to { transform:rotate(360deg); }
+    }
+    @keyframes pulse {
+      0%,100% { transform:scale(1); }
+      50%      { transform:scale(1.04); }
+    }
+
+    /* ─── RESPONSIVE ─────────────────────────────────────────────────── */
+    @media (max-width: 520px) {
+      .steps { grid-template-columns: 1fr; }
+      .actions { flex-direction: column; }
+      .drop-zone { min-height: 200px; }
+    }
+  </style>
+</head>
+<body>
+
+<!-- HEADER -->
+<header>
+  <div class="logo-wrap">
+    <div class="logo-icon">🍅</div>
+    <span class="logo-text">Ripen<span>Tom</span></span>
+  </div>
+  <h1>¿Está listo tu <em>tomate</em>?</h1>
+  <p class="subtitle">Sube una foto y nuestra IA lo clasifica en segundos como maduro, verde o dañado.</p>
+</header>
+
+<!-- MAIN -->
+<main class="main">
+
+  <!-- HOW IT WORKS -->
+  <div class="steps">
+    <div class="step">
+      <div class="step-num">1</div>
+      <div class="step-title">📸 Sube la foto</div>
+      <div class="step-sub">JPG o PNG de tu tomate</div>
+    </div>
+    <div class="step">
+      <div class="step-num">2</div>
+      <div class="step-title">🔬 Analizamos</div>
+      <div class="step-sub">Color, textura y forma</div>
+    </div>
+    <div class="step">
+      <div class="step-num">3</div>
+      <div class="step-title">✅ Resultado</div>
+      <div class="step-sub">Clasificación instantánea</div>
+    </div>
+  </div>
+
+  <!-- CARD -->
+  <div class="card">
+
+    <!-- DROP ZONE -->
+    <div class="drop-zone" id="dropZone">
+      <input type="file" id="fileInput" accept="image/*" />
+      <img id="previewImg" class="preview-img" alt="Preview" />
+      <div class="drop-icon" id="dropIcon">📁</div>
+      <div class="drop-title" id="dropTitle">Arrastra tu imagen aquí</div>
+      <div class="drop-sub" id="dropSub">o haz clic para seleccionar · JPG, PNG, WEBP</div>
+    </div>
+
+    <!-- ACTIONS -->
+    <div class="actions">
+      <button class="btn btn-primary" id="analyzeBtn" disabled onclick="classify()">
+        🔍 Analizar tomate
+      </button>
+      <button class="btn btn-secondary" id="clearBtn" style="display:none;flex:0 0 auto;padding:.85rem 1.25rem" onclick="clearAll()">
+        ✕ Limpiar
+      </button>
+    </div>
+
+    <div class="divider"></div>
+
+    <!-- RESULT AREA -->
+    <div id="result-area"></div>
+
+  </div><!-- /card -->
+</main>
+
+<!-- FOOTER -->
+<footer>
+  Powered by <a href="https://huggingface.co/spaces/jucollas/riperton-backend" target="_blank">RipenTom API</a>
+  &nbsp;·&nbsp; Modelo: Random Forest con features HSV · LAB · GLCM · LBP
+</footer>
+
+<script>
+  const API_URL = 'https://jucollas-riperton-backend.hf.space/predict';
+
+  const dropZone   = document.getElementById('dropZone');
+  const fileInput  = document.getElementById('fileInput');
+  const previewImg = document.getElementById('previewImg');
+  const analyzeBtn = document.getElementById('analyzeBtn');
+  const clearBtn   = document.getElementById('clearBtn');
+  const dropIcon   = document.getElementById('dropIcon');
+  const dropTitle  = document.getElementById('dropTitle');
+  const dropSub    = document.getElementById('dropSub');
+  const resultArea = document.getElementById('result-area');
+
+  let selectedFile = null;
+
+  const CLASES = {
+    ripe:   { emoji: '🍅', label: 'Maduro (Ripe)',    desc: 'El tomate está en su punto óptimo de madurez.',      cls: 'ripe'   },
+    unripe: { emoji: '🟢', label: 'Verde (Unripe)',   desc: 'El tomate aún necesita madurar unos días más.',       cls: 'unripe' },
+    damage: { emoji: '⚠️', label: 'Dañado (Damage)',  desc: 'Se detectaron manchas o signos de deterioro.',        cls: 'damage' },
+  };
+
+  // ── File handling ────────────────────────────────────────────────
+  fileInput.addEventListener('change', e => {
+    if (e.target.files[0]) handleFile(e.target.files[0]);
+  });
+
+  dropZone.addEventListener('dragover',  e => { e.preventDefault(); dropZone.classList.add('drag'); });
+  dropZone.addEventListener('dragleave', ()  => dropZone.classList.remove('drag'));
+  dropZone.addEventListener('drop', e => {
+    e.preventDefault(); dropZone.classList.remove('drag');
+    if (e.dataTransfer.files[0]) handleFile(e.dataTransfer.files[0]);
+  });
+
+  function handleFile(file) {
+    if (!file.type.startsWith('image/')) return;
+    selectedFile = file;
+    const reader = new FileReader();
+    reader.onload = ev => {
+      previewImg.src = ev.target.result;
+      previewImg.style.display = 'block';
+      dropIcon.style.display  = 'none';
+      dropTitle.style.display = 'none';
+      dropSub.style.display   = 'none';
+      analyzeBtn.disabled = false;
+      clearBtn.style.display  = 'flex';
+      resultArea.innerHTML = '';
+    };
+    reader.readAsDataURL(file);
+  }
+
+  function clearAll() {
+    selectedFile = null;
+    fileInput.value = '';
+    previewImg.src = ''; previewImg.style.display = 'none';
+    dropIcon.style.display  = 'block';
+    dropTitle.style.display = 'block';
+    dropSub.style.display   = 'block';
+    analyzeBtn.disabled = true;
+    clearBtn.style.display  = 'none';
+    resultArea.innerHTML = '';
+  }
+
+  // ── Classify ─────────────────────────────────────────────────────
+  async function classify() {
+    if (!selectedFile) return;
+    analyzeBtn.disabled = true;
+
+    resultArea.innerHTML = `
+      <div class="loading-wrap">
+        <div class="spinner"></div>
+        <p class="loading-text">Analizando tu tomate…</p>
+      </div>`;
+
+    try {
+      const fd = new FormData();
+      fd.append('file', selectedFile);
+
+      const resp = await fetch(API_URL, { method: 'POST', body: fd });
+      if (!resp.ok) throw new Error(`Error ${resp.status}: ${resp.statusText}`);
+      const data = await resp.json();
+
+      renderResult(data);
+    } catch (err) {
+      resultArea.innerHTML = `
+        <div class="error-box">
+          ⚠️ <span><strong>No se pudo conectar con la API.</strong><br>${err.message}<br>
+          Verifica que el Space de Hugging Face esté activo.</span>
+        </div>`;
+    }
+
+    analyzeBtn.disabled = false;
+  }
+
+  // ── Render result ─────────────────────────────────────────────────
+  function renderResult(data) {
+    const key   = (data.class || '').toLowerCase();
+    const probs = data.probabilities || {};
+    const info  = CLASES[key] || { emoji:'❓', label: key, desc:'', cls: key };
+
+    const ripe   = Math.round((probs.ripe   || 0) * 100);
+    const unripe = Math.round((probs.unripe || 0) * 100);
+    const damage = Math.round((probs.damage || 0) * 100);
+
+    resultArea.innerHTML = `
+      <div class="result-wrap">
+        <div class="result-header">
+          <div class="result-badge badge-${info.cls}">${info.emoji}</div>
+          <div>
+            <div class="result-class ${info.cls}">${info.label}</div>
+            <div class="result-desc">${info.desc}</div>
+          </div>
+        </div>
+        <div class="bars">
+          <div class="bar-row">
+            <span class="bar-emoji">🍅</span>
+            <span class="bar-label">Maduro</span>
+            <div class="bar-track"><div class="bar-fill fill-ripe" id="bar-ripe"></div></div>
+            <span class="bar-pct">${ripe}%</span>
+          </div>
+          <div class="bar-row">
+            <span class="bar-emoji">🟢</span>
+            <span class="bar-label">Verde</span>
+            <div class="bar-track"><div class="bar-fill fill-unripe" id="bar-unripe"></div></div>
+            <span class="bar-pct">${unripe}%</span>
+          </div>
+          <div class="bar-row">
+            <span class="bar-emoji">⚠️</span>
+            <span class="bar-label">Dañado</span>
+            <div class="bar-track"><div class="bar-fill fill-damage" id="bar-damage"></div></div>
+            <span class="bar-pct">${damage}%</span>
+          </div>
+        </div>
+      </div>`;
+
+    // Animate bars after paint
+    requestAnimationFrame(() => {
+      setTimeout(() => {
+        document.getElementById('bar-ripe').style.width   = ripe   + '%';
+        document.getElementById('bar-unripe').style.width = unripe + '%';
+        document.getElementById('bar-damage').style.width = damage + '%';
+      }, 60);
+    });
+  }
+</script>
+</body>
+</html>
